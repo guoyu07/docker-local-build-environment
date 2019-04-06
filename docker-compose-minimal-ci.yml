@@ -26,51 +26,14 @@ services:
        - gitlab
        - jenkins
        - nexus
+     volumes:
+        # Overwrites the Dockerfile Copys (ugly but works)
+       - ./nginx-reverse/reverse-proxy-min.conf:/etc/nginx/conf.d/reverse-proxy.conf
      networks:
        - devstacknetwork
-# ------------------------------------------------------------------------------
-  regweb:
-    container_name: docker-registry-web
-    image: hyper/docker-registry-web
-    networks:
-      - devstacknetwork
-    extra_hosts:
-      - ${DC_HOSTNAME}:${DC_HOSTIP}
-    environment:
-      - REGISTRY_URL=http://${DC_HOSTNAME}:5000/v2  
-      - REGISTRY_NAME=Your docker-local-build-registry@${DC_HOSTNAME}:5000
-      - REGISTRY_READONLY=false 
-      - REGISTRY_CONTEXT_PATH=/regweb
-# ------------------------------------------------------------------------------
-  registry:
-    container_name: registry
-    image: registry:2
-    network_mode: "host"
-    ports:
-      - 5000:5000
-    volumes:
-      - ${DC_BASE_DATA_DIR}/docker-registry/config.yml:/etc/docker/registry/config.yml
-      - ${DC_BASE_DATA_DIR}/docker-registry/images:/var/lib/registry
-# ------------------------------------------------------------------------------
-  postgres:
-    container_name: postgres
-    build: postgres
-    extra_hosts:
-      - ${DC_HOSTNAME}:${DC_HOSTIP}
-    environment:
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_USER=postgres
-    networks:
-      - devstacknetwork
-    volumes:
-      - ${DC_BASE_DATA_DIR}/postgres-db/postgresql:/var/lib/postgresql
-      # This needs explicit mapping due to
-      # https://github.com/docker-library/postgres/blob/4e48e3228a30763913ece952c611e5e9b95c8759/Dockerfile.template#L52
-      # there is ENV PGDATA /var/lib/postgresql/data
-      - ${DC_BASE_DATA_DIR}/postgres-db/postgresql_data:/var/lib/postgresql/data
+   
     
 # ------------------------------------------------------------------------------
-
   jenkins:
     build: jenkins-fat
     container_name: jenkins-fat
@@ -81,7 +44,6 @@ services:
     volumes:
       - ${DC_BASE_DATA_DIR}/jenkins:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-
 # ------------------------------------------------------------------------------
   gitlab:
     image: 'gitlab/gitlab-ce:latest'
@@ -123,13 +85,11 @@ services:
       - NEXUS_CONTEXT=nexus
     volumes:
       - ${DC_BASE_DATA_DIR}/nexus:/nexus-data
-
 # ------------------------------------------------------------------------------
   gitlabrunner:
     build: gitlabrunner
     container_name: gitlabrunner
     network_mode: "host"
-    privileged: true
     extra_hosts:
       - ${DC_HOSTNAME}:${DC_HOSTIP}
     environment:
@@ -141,7 +101,23 @@ services:
     volumes:
       - ${DC_BASE_DATA_DIR}/gitlab-runner/config:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
-
-      
+     
+# ------------------------------------------------------------------------------
+  postgres:
+    container_name: postgres
+    build: postgres
+    extra_hosts:
+      - ${DC_HOSTNAME}:${DC_HOSTIP}
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=postgres
+    networks:
+      - devstacknetwork
+    volumes:
+      - ${DC_BASE_DATA_DIR}/postgres-db/postgresql:/var/lib/postgresql
+      # This needs explicit mapping due to
+      # https://github.com/docker-library/postgres/blob/4e48e3228a30763913ece952c611e5e9b95c8759/Dockerfile.template#L52
+      # there is ENV PGDATA /var/lib/postgresql/data
+      - ${DC_BASE_DATA_DIR}/postgres-db/postgresql_data:/var/lib/postgresql/data
     
       

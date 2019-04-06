@@ -77,6 +77,7 @@ mkdir -p $USER_DATA_DIR/sonar/sonarqube_conf
 mkdir -p $USER_DATA_DIR/jenkins
 mkdir -p $USER_DATA_DIR/gitlab/config/ssl
 mkdir -p $USER_DATA_DIR/nexus
+mkdir -p $USER_DATA_DIR/docker-registry/images
 chown -R 200 $USER_DATA_DIR/nexus
 #----------------------------------
 
@@ -124,8 +125,15 @@ else
   cp preconfig/sonar/sonar.properties $USER_DATA_DIR/sonar/sonarqube_conf
 fi
 
-#Copy predefined Jobs and Configs
+#Copy and modify predefined Jobs and Configs
 cp -r preconfig/jenkins/* $USER_DATA_DIR/jenkins/
+
+# Copy Registry Config
+cp preconfig/docker-registry/config.yml $USER_DATA_DIR/docker-registry
+
+# Prepare the sample-project to run on <your-host>
+sed -i s#HOSTNAME#${HOSTNAME}#g  spring-boot-keycloak-sample/src/main/resources/application.properties 
+sed -i s#HOSTNAME#${HOSTNAME}#g  spring-boot-keycloak-sample/src/main/resources/static/index.html 
 
 # Set the right volume-names, hostname and host_ip in .env for docker-compose.yml
 echo "---------- generating .env file for docker-compose.yml "
@@ -133,6 +141,7 @@ cat .env.template > .env
 echo "DC_HOSTNAME=${HOSTNAME}" >> .env
 echo "DC_HOSTIP=${HOSTIP}" >> .env
 echo "DC_BASE_DATA_DIR=${USER_DATA_DIR}" >> .env
+chmod a+rw .env
 echo "---------- generated file  ---------------------------- "
 cat .env
 echo "-------------------------------------------------------------------------------------------"
@@ -144,18 +153,23 @@ echo "Environment for docker-compose.yml created"
 echo " "
 echo "use the following URL"
 BASE_URL="http://"$(hostname)"/"
-echo "Jenkins: ${BASE_URL}jenkins"
-## echo "Sonar  : ${BASE_URL}sonar"
-echo "Nexus  : ${BASE_URL}nexus"
-echo "Gitlab : ${BASE_URL}gitlab"
+echo "Jenkins:            ${BASE_URL}jenkins"
+echo "Nexus  :            ${BASE_URL}nexus"
+echo "Gitlab :            ${BASE_URL}gitlab"
+echo "Docker-Registry-Ui: ${BASE_URL}regweb"
+echo "Sonar:              ${BASE_URL}sonar (optional)"
+echo "Keycloak:           ${BASE_URL}auth (optional)"
 echo "Feel free to provide push-requests :-)"
 pause 
 echo " "
 
 echo "Setup finished, just type the following commands to start and see the logs of your environment"
-echo "docker-compose up --build -d "
+echo " "
+echo "Without Sonar and Keycloak: docker-compose up --build -d "
+echo "Full Toolset              : docker-compose -f docker-compose.yml -f docker-compose-sonar.yml -f docker-compose-keycloak.yml up --build -d"
 echo "docker-compose logs -f"
-
+echo " " 
+echo "be patient ...10 docker-containers needs time to start up " 
 
 
 
